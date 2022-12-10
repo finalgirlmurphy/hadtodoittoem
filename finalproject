@@ -10,7 +10,7 @@ def masterhashcomparer(password):
     masterfile = master.read().splitlines()
     salt = masterfile[0]
     hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
-    if (hash == masterfile[1]):
+    if (hash == masterfile['N']):
         return True
     else:
         return False
@@ -112,7 +112,7 @@ while (True):
 while (True):
     try:
         selection = mainpage()
-        if (selection.upper != 'N' or selection != 'F' or selection != 'D' or selection != 'S' or selection != 'X'):
+        if (selection != 'N' or selection != 'F' or selection != 'D' or selection != 'S' or selection != 'X'):
             print("\nThat is not a valid response. Please try again:")
     except ValueError:
         print("\nThat is not a valid response. Please try again:")
@@ -129,7 +129,7 @@ while (True):
         username = input(f"Enter username for {site}: ")
         password = input(f"Enter your password for {site}:")
         hashed = hashedpass(password, length)
-        csvwrite(username, site, hashed[0], hashed[1])
+        csvwrite(username, site, hashed[0], hashed['N'])
         print("\nPassword has been hashed!\n")
 
     if (selection == 'F'):
