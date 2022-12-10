@@ -91,12 +91,11 @@ def mainpage():
 attempts = 0
 while (True):
     try:
-        password = input("Enter your locker password (3 attempts before self-destruct): ")
+        password = input("Enter your locker password:")
         if (not masterhashcomparer(password)):
-            if (attempts > 3):
+            if (attempts > 1):
                 print("\nToo many incorrect attempts. Self destructing.")
-                del CSVFILE
-                del HASHFILE
+                raise SystemExit(0)
             else:
                 print("\nIncorrect password. Please try again:")
                 attempts += 1
