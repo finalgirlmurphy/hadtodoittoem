@@ -1,0 +1,174 @@
+import hashlib
+import secrets
+import csv
+
+CSVFILE = "passwords.csv"
+HASHFILE = "master.txt"
+
+def masterhashcomparer(password):
+    master = open(HASHFILE)
+    masterfile = master.read().splitlines()
+    salt = masterfile[0]
+    hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
+    if (hash == masterfile[1]):
+        return True
+    else:
+        return False
+
+def createmasterhashes(password):
+    with open(CSVFILE, mode='w') as passwordfile:
+        writepassword = csv.writer(passwordfile, delimiter=',', quotechar='"')
+        writepassword.writerow(["site", "username", "salt", "hash"])
+    master = open(HASHFILE, 'w')
+    salt = secrets.token_hex(64)
+    hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
+    master.write("%s\n" % salt)
+    master.write("%s\n" % hash)
+    master.close()
+
+def hashedpass(password, length):
+    salt = secrets.token_hex(64)
+    hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
+    hash = hash[:length]
+    return salt, hash
+
+def csvwrite(username, site, hash, salt):
+    try:
+        csvread("site")
+    except FileNotFoundError:
+        with open(CSVFILE, mode='a') as passwordfile:
+            writepassword = csv.writer(passwordfile, delimiter=',', quotechar='"')
+            writepassword.writerow(["site", "username", "salt", "hash"])
+    with open(CSVFILE, mode='a') as passwordfile:
+        writepassword = csv.writer(passwordfile, delimiter=',', quotechar='"')
+        writepassword.writerow([site, username, salt, hash])
+
+def csvread(site):
+    with open(CSVFILE) as passwordfile:
+        password_reader = csv.reader(passwordfile, delimiter=',')
+        line_count = 0
+        for row in password_reader:
+            if (line_count != 0):
+                if (row[0] == site):
+                    return row
+            line_count += 1
+
+def csvdelete(site):
+    new = list()
+    with open(CSVFILE) as passwordfile:
+        readpassword = csv.reader(passwordfile, delimiter=',')
+        for row in readpassword:
+            if (row[0] != site):
+                new.append(row)
+
+    with open(CSVFILE, mode="w") as passwordfile:
+        writepassword = csv.writer(passwordfile, delimiter=',', quotechar='"')
+        writepassword.writerows(new)
+
+def sitesrow():
+    with open(CSVFILE) as passwordfile:
+        password_reader = csv.reader(passwordfile, delimiter=',')
+        sites = list()
+        line_count = 0
+        for row in password_reader:
+            if (line_count != 0):
+                sites.append(row[0])
+            line_count += 1
+    return sites
+
+#The actual program:
+def mainpage():
+    print("Hi! Welcome to your password locker!")
+    print("Enter N to create a password,")
+    print("F to find an existing password,")
+    print("D to delete an existing password,")
+    print("S to list site passwords stored,")
+    print("X to quit the program.")
+    response = int(input("Enter option: "))
+    return response
+
+#self destruct
+attempts = 0
+while (True):
+    try:
+        password = input("Enter your locker password (3 attempts before self-destruct): ")
+        if (not masterhashcomparer(password)):
+            if (attempts > 3):
+                print("\nToo many incorrect attempts. Self destructing.")
+                del CSVFILE
+                del HASHFILE
+            else:
+                print("\nIncorrect password. Please try again:")
+                attempts += 1
+                continue
+        else:
+            print("\nPassword correct!")
+            break
+    except FileNotFoundError:
+        print("\nThis file does not exist, creating now...")
+        createmasterhashes(password)
+        break
+
+while (True):
+    try:
+        selection = mainpage()
+        if (selection.upper != 'N' or selection != 'F' or selection != 'D' or selection != 'S' or selection != 'X'):
+            print("\nThat is not a valid response. Please try again:")
+    except ValueError:
+        print("\nThat is not a valid response. Please try again:")
+        continue
+
+    if selection == 'N':
+        site = input("What site would you like to add?")
+        try:
+            if (csvread(site) != None):
+                print("\nA password for that site name already exists!")
+                continue
+        except FileNotFoundError:
+            pass
+        username = input(f"Enter username for {site}: ")
+        password = input(f"Enter your password for {site}:")
+        hashed = hashedpass(password, length)
+        csvwrite(username, site, hashed[0], hashed[1])
+        print("\nPassword has been hashed!\n")
+
+    if (selection == 'F'):
+        site = input("What site password would you like to find?")
+        try:
+            if (csvread(site) == None):
+                print("\nThere is no password set for that site.")
+                continue
+            else:
+                csvRow = csvread(site)
+                print("\n")
+                print(f"Site name: {csvRow[0]}")
+                print(f"Username: {csvRow[1]}")
+                print(f"Password: {csvRow[3]}")
+                print("\n")
+        except FileNotFoundError:
+            print("\nThis password file does not exist.\n")
+
+    if (selection == 'D'):
+        site = input("What site password would you like to delete?")
+        if (csvread(site) == None):
+            print("\nNo password stored for this site.")
+            continue
+        else:
+            csvdelete(site)
+            print("\nSite deleted!")
+
+    if (selection == 'S'):
+        if (sitesrow()):
+            counter = 1
+            print("\n")
+            for site in sitesrow():
+                print(f"{counter}, {site}")
+                counter += 1
+            print("\n")
+        else:
+            print("\nNo sites in file.")
+
+    if (selection == 'X'):
+        print("\nGoodbye user!")
+        break
+
